@@ -66,7 +66,8 @@ def timestamp(value):
     return moment
 
 
-def fetch_group(group, first, next_week, last):
+def fetch_group(group, week_starts, last):
+    first = week_starts[0]
     query = urlencode({'group': group, 'from': first, 'to': last})
     try:
         result = download_json(API + 'items/?' + query)
@@ -76,12 +77,13 @@ def fetch_group(group, first, next_week, last):
             raise ValueError('Unexpected schedule response')
         updated = result['updated_at']
         timestamp(updated)
-        slots = {first: [], next_week: []}
+        slots = {week: [] for week in week_starts}
         for item in result['items']:
-            iso = date.fromisoformat(item['date']).isoformat()
+            day = date.fromisoformat(item['date'])
+            iso = day.isoformat()
             if not first <= iso <= last:
                 raise ValueError('Lesson outside the requested range')
-            target = first if iso < next_week else next_week
+            target = (day - timedelta(days=day.weekday())).isoformat()
             slots[target].append({
                 key: item[key] for key in FIELDS if isinstance(item.get(key), str) and item[key]
             })
@@ -120,46 +122,54 @@ def main():
 
     today = datetime.now(MOSCOW).date()
     monday = today - timedelta(days=today.weekday())
-    past, first, next_week, last = ((monday + timedelta(days=n)).isoformat() for n in (-7, 0, 7, 13))
+    past = (monday - timedelta(days=7)).isoformat()
+    week_starts = [(monday + timedelta(weeks=n)).isoformat() for n in range(6)]
     old_weeks = previous['weeks']
-    weeks = {past: old_weeks.get(past, {}), first: {}, next_week: {}}
-    success = 0
+    weeks = {past: old_weeks.get(past, {})}
+    successful = 0
     errors = set()
     deadline = time.monotonic() + 210
 
-    for week in (first, next_week):
+    for week in week_starts:
         weeks[week] = {
             group: {**entry, 'stale': True}
             for group, entry in old_weeks.get(week, {}).items() if group in groups
         }
 
     with ThreadPoolExecutor(max_workers=3) as pool:
-        for offset in range(0, len(groups), 12):
-            batch = groups[offset:offset + 12]
-            for group, results_by_week, error in pool.map(
-                    lambda group: fetch_group(group, first, next_week, last), batch):
-                if results_by_week is None:
-                    errors.add(error)
-                    continue
-                success += 1
-                for week in (first, next_week):
-                    old = old_weeks.get(week, {}).get(group)
-                    weeks[week][group] = merge(old, results_by_week[week])
-            if (offset == 0 and success == 0) or time.monotonic() >= deadline:
+        # ВШН принимает не более 31 дня за запрос.
+        for window in (week_starts[:4], week_starts[4:]):
+            last = (date.fromisoformat(window[-1]) + timedelta(days=6)).isoformat()
+            success = 0
+            for offset in range(0, len(groups), 12):
+                batch = groups[offset:offset + 12]
+                for group, results_by_week, error in pool.map(
+                        lambda group: fetch_group(group, window, last), batch):
+                    if results_by_week is None:
+                        errors.add(error)
+                        continue
+                    success += 1
+                    for week, entry in results_by_week.items():
+                        old = old_weeks.get(week, {}).get(group)
+                        weeks[week][group] = merge(old, entry)
+                if (offset == 0 and success == 0) or time.monotonic() >= deadline:
+                    break
+            successful += success
+            print(f'ВШН ответила для {success} из {len(groups)} групп за {window[0]} — {last}.', flush=True)
+            if time.monotonic() >= deadline:
                 break
     if errors:
         print('::warning::Ошибки источника: ' + '; '.join(sorted(errors)), flush=True)
 
-    if success == 0:
+    if successful == 0:
         if not initial:
             raise SystemExit('Источник ВШН не вернул расписание ни для одной группы. Публикация пропущена.')
         print('::warning::Источник ВШН недоступен. При первой публикации используется стартовая копия.')
         write(previous)
         return
-    if success < len(groups):
-        print(f'::warning::ВШН ответила для {success} из {len(groups)} групп. Для остальных сохранены доступные копии.')
+    if successful < len(groups) * 2:
+        print('::warning::По некоторым группам или неделям ВШН не ответила. Сохранены доступные копии.')
     write({'groups': groups, 'weeks': {week: entries for week, entries in weeks.items() if entries}})
-    print(f'ВШН ответила для {success} из {len(groups)} групп. Диапазон запросов {first} — {last}.')
 
 
 if __name__ == '__main__':

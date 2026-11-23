@@ -317,9 +317,13 @@ function save(key, value) {
 
 const params = new URLSearchParams(location.search);
 const sampleGroup = '15-11';
+const validGroup = value => typeof value === 'string' && /^[\p{L}\p{N} .()–_-]{1,48}$/u.test(value);
+const requestedGroup = params.get('group');
+const savedGroup = getSaved('group');
 let groups = [];
-const wantedGroup = params.get('group') || getSaved('group');
-let group = typeof wantedGroup === 'string' && /^[\p{L}\p{N} .()–_-]{1,48}$/u.test(wantedGroup) ? wantedGroup : sampleGroup;
+let group = validGroup(requestedGroup) ? requestedGroup : validGroup(savedGroup) ? savedGroup : sampleGroup;
+let userChoseGroup = false;
+let deviceStorage;
 let day = validDate(params.get('date')) ? params.get('date') : todayIso();
 let view = params.get('view') === 'week' ? 'week' : 'day';
 let snapshot = null;
@@ -359,11 +363,12 @@ function chooseGroup(value) {
   if (!value) return;
   const changed = group !== value;
   group = value;
+  userChoseGroup = true;
+  save('group',group);
   closePicker();
-  if (changed) {
-    save('group',group);
-    loadWeek();
-  }
+  if (changed) loadWeek();
+  else updateUrl();
+  deviceStorage?.setItem('schedule-group',group);
 }
 input.addEventListener('focus', () => input.select());
 input.addEventListener('input', () => showPicker(input.value));
@@ -493,7 +498,9 @@ function render() {
 function updateUrl() {
   if (location.protocol === 'file:') return;
   const url = new URL(location.href);
-  url.search = new URLSearchParams({group,date:day,view});
+  url.searchParams.set('date',day);
+  url.searchParams.set('view',view);
+  if (validGroup(requestedGroup) || userChoseGroup) url.searchParams.set('group',group);
   history.replaceState(null,'',url);
 }
 function loadWeek() {
@@ -558,8 +565,21 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 setInterval(() => { if (!document.hidden) refreshSchedule(); },5 * 60 * 1000);
 window.addEventListener('load', () => {
   const telegram = window.Telegram?.WebApp;
-  telegram?.ready();
-  telegram?.expand();
+  telegram?.ready?.();
+  telegram?.expand?.();
+  if (!telegram?.initData || !telegram.isVersionAtLeast?.('9.0')) return;
+  deviceStorage = telegram.DeviceStorage;
+  if (userChoseGroup) {
+    deviceStorage?.setItem('schedule-group',group);
+  } else if (!validGroup(requestedGroup) && !validGroup(savedGroup)) {
+    deviceStorage?.getItem('schedule-group', (error,value) => {
+      if (error || userChoseGroup || !validGroup(value) || (groups.length && !groups.includes(value))) return;
+      group = value;
+      save('group',group);
+      if (options.hidden) input.value = group;
+      loadWeek();
+    });
+  }
 });
 </script>
 </body>

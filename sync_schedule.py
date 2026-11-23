@@ -17,14 +17,14 @@ FIELDS = ('date', 'start_time', 'end_time', 'discipline', 'lesson_type',
 
 
 class DownloadError(Exception):
-    def __init__(self, status):
-        super().__init__(f'HTTP {status}' if status else 'соединение недоступно')
+    def __init__(self, status, detail=''):
+        super().__init__(f'HTTP {status}' if status else detail or 'соединение недоступно')
         self.status = status
 
 
 def download_json(url):
     response = subprocess.run(
-        ['curl', '--silent', '--show-error', '--max-time', '12',
+        ['curl', '--silent', '--show-error', '--connect-timeout', '4', '--max-time', '10',
          '--max-filesize', '10000000', '--proto', '=https',
          '--header', 'Accept: application/json', '--header', 'Cache-Control: no-cache',
          '--write-out', '\n%{response_code}', url],
@@ -33,7 +33,7 @@ def download_json(url):
     body, _, status = response.stdout.rpartition(b'\n')
     status = int(status) if status.isdigit() else 0
     if response.returncode or status != 200:
-        raise DownloadError(status if status != 200 else 0)
+        raise DownloadError(status if status != 200 else 0, response.stderr.decode(errors='replace').strip())
     return json.loads(body)
 
 
@@ -86,9 +86,9 @@ def fetch_group(group, first, next_week, last):
                 key: item[key] for key in FIELDS if isinstance(item.get(key), str) and item[key]
             })
         return group, {week: {'updated_at': updated, 'stale': bool(result.get('stale')), 'items': items}
-                       for week, items in slots.items()}
-    except (DownloadError, ValueError, TypeError, AttributeError, KeyError):
-        return group, None
+                       for week, items in slots.items()}, None
+    except (DownloadError, ValueError, TypeError, AttributeError, KeyError) as error:
+        return group, None, str(error)[:140]
     finally:
         time.sleep(0.6)
 
@@ -115,8 +115,8 @@ def main():
             published = list(dict.fromkeys(group for group in directory['groups'] if is_group(group)))
             if published:
                 groups = published
-    except (DownloadError, ValueError, AttributeError):
-        print('::warning::Список групп ВШН недоступен. Используется предыдущий список.')
+    except (DownloadError, ValueError, AttributeError) as error:
+        print(f'::warning::Список групп ВШН недоступен. Используется предыдущий список. {error}', flush=True)
 
     today = datetime.now(MOSCOW).date()
     monday = today - timedelta(days=today.weekday())
@@ -124,17 +124,31 @@ def main():
     old_weeks = previous['weeks']
     weeks = {past: old_weeks.get(past, {}), first: {}, next_week: {}}
     success = 0
+    errors = set()
+    deadline = time.monotonic() + 210
+
+    for week in (first, next_week):
+        weeks[week] = {
+            group: {**entry, 'stale': True}
+            for group, entry in old_weeks.get(week, {}).items() if group in groups
+        }
 
     with ThreadPoolExecutor(max_workers=3) as pool:
-        results = pool.map(lambda group: fetch_group(group, first, next_week, last), groups)
-        for group, results_by_week in results:
-            if results_by_week is not None:
+        for offset in range(0, len(groups), 12):
+            batch = groups[offset:offset + 12]
+            for group, results_by_week, error in pool.map(
+                    lambda group: fetch_group(group, first, next_week, last), batch):
+                if results_by_week is None:
+                    errors.add(error)
+                    continue
                 success += 1
-            for week in (first, next_week):
-                old = old_weeks.get(week, {}).get(group)
-                entry = merge(old, results_by_week[week] if results_by_week else None)
-                if entry is not None:
-                    weeks[week][group] = entry
+                for week in (first, next_week):
+                    old = old_weeks.get(week, {}).get(group)
+                    weeks[week][group] = merge(old, results_by_week[week])
+            if (offset == 0 and success == 0) or time.monotonic() >= deadline:
+                break
+    if errors:
+        print('::warning::Ошибки источника: ' + '; '.join(sorted(errors)), flush=True)
 
     if success == 0:
         if not initial:

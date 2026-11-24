@@ -152,7 +152,10 @@ svg{display:block;width:19px;height:19px;flex:none}
 .icon-button,.today-button{display:grid;place-items:center;min-width:42px;min-height:42px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .icon-button:hover,.today-button:hover{background:#ebf4df}
 .today-button{padding:0 13px;font-size:.875rem;font-weight:800;color:var(--green);margin-left:5px}
-.dashboard{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px}
+.dashboard{display:grid;grid-template-columns:minmax(0,1fr) 280px;grid-template-areas:"schedule upcoming" "schedule data";grid-template-rows:auto 1fr;align-items:start;gap:13px 24px}
+.schedule{grid-area:schedule}
+.upcoming{grid-area:upcoming}
+.data-card{grid-area:data}
 .section-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
 .section-top h2{margin:0;font-size:clamp(1.4rem,3vw,1.9rem);line-height:1.18;font-weight:800;letter-spacing:-.05em}
 .views{padding:3px;display:flex;border:1px solid var(--line);border-radius:11px;background:#eaf0e5}
@@ -184,7 +187,7 @@ svg{display:block;width:19px;height:19px;flex:none}
 .room svg{width:15px;height:15px;margin-top:2px;color:var(--green)}
 .day-heading{margin:17px 0 8px;font-size:1.02rem;font-weight:800}
 .week-day:first-child .day-heading{margin-top:2px}
-.side-card{border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff;margin-bottom:13px}
+.side-card{border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff}
 .upcoming{background:#e7efdc;border-color:#dce6d1}
 .side-heading{display:flex;gap:8px;align-items:center}
 .side-heading h2{margin:0;font-size:.925rem;font-weight:850}
@@ -204,8 +207,8 @@ svg{display:block;width:19px;height:19px;flex:none}
 .footer span{display:inline-flex;align-items:center;gap:5px}
 .footer svg{width:15px;height:15px}
 @media(max-width:910px){.wrap{width:calc(100% - 46px)}.dashboard{grid-template-columns:minmax(0,1fr) 232px;gap:16px}.lesson{grid-template-columns:60px minmax(0,1fr) minmax(80px,22%);gap:9px;padding-inline:10px}}
-@media(max-width:730px){.dashboard{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;gap:10px}.side-card{margin-bottom:0}.hero::before{background-size:auto,820px auto;background-position:center,69% 49%}}
-@media(max-width:540px){.wrap{width:calc(100% - 28px)}.top-inner{min-height:64px}.hero{min-height:238px;margin-top:14px;border-radius:18px}.hero-inner{padding:23px 18px}.hero::before{background-image:linear-gradient(90deg,#12372f 0%,#12372feb 23%,#12372f2a 100%),var(--campus);background-position:center,59% 48%;opacity:.9}.hero h1{font-size:3rem;margin:14px 0 9px}.hero p{font-size:.875rem}.controls{margin:13px 0 19px;display:grid;gap:13px;padding:12px}.group{width:100%}.week-controls{display:grid;grid-template-columns:42px minmax(0,1fr) 42px auto;gap:5px}#week-label{min-width:0;white-space:normal}.today-button{margin-left:2px}.days{gap:4px}.day{min-height:58px;border-radius:8px}.views button{padding-inline:8px}.lesson{grid-template-columns:54px minmax(0,1fr);padding:10px 9px;gap:7px 9px}.room{grid-column:2;gap:3px}.room small:empty{display:none}.sidebar{grid-template-columns:1fr}.footer{margin-top:20px}}
+@media(max-width:730px){.dashboard{grid-template-columns:minmax(0,1fr);grid-template-areas:"upcoming" "schedule" "data";grid-template-rows:auto;gap:16px}.hero::before{background-size:auto,820px auto;background-position:center,69% 49%}}
+@media(max-width:540px){.wrap{width:calc(100% - 28px)}.top-inner{min-height:64px}.hero{min-height:238px;margin-top:14px;border-radius:18px}.hero-inner{padding:23px 18px}.hero::before{background-image:linear-gradient(90deg,#12372f 0%,#12372feb 23%,#12372f2a 100%),var(--campus);background-position:center,59% 48%;opacity:.9}.hero h1{font-size:3rem;margin:14px 0 9px}.hero p{font-size:.875rem}.controls{margin:13px 0 19px;display:grid;gap:13px;padding:12px}.group{width:100%}.week-controls{display:grid;grid-template-columns:42px minmax(0,1fr) 42px auto;gap:5px}#week-label{min-width:0;white-space:normal}.today-button{margin-left:2px}.days{gap:4px}.day{min-height:58px;border-radius:8px}.views button{padding-inline:8px}.lesson{grid-template-columns:54px minmax(0,1fr);padding:10px 9px;gap:7px 9px}.room{grid-column:2;gap:3px}.room small:empty{display:none}.footer{margin-top:20px}}
 
 body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
 
@@ -258,6 +261,19 @@ body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
 [data-theme=dark] .lesson.practice{--accent:#d19a67;--tag:#432e1f;--tag-text:#ffdab5}
 [data-theme=dark] .lesson.lab{--accent:#df8769;--tag:#492820;--tag-text:#ffd4c3}
 [data-theme=dark] .lesson.exam{--accent:#c5ad70;--tag:#3b321f;--tag-text:#f5e0aa}
+
+:root{--live-panel:#f3f8ec;--track:#d5e4cd}
+[data-theme=dark]{--live-panel:#38271c;--track:#604533}
+.dashboard :is(.lesson,.upcoming).is-current{border-color:var(--green);background:var(--live-panel)}
+.upcoming.is-current{border-left-width:4px;padding-left:13px}
+.lesson-progress{grid-column:1/-1;min-width:0}
+.upcoming .lesson-progress{margin-top:12px}
+.progress-caption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px;margin-bottom:6px;font-size:.8rem;color:var(--green);font-variant-numeric:tabular-nums}
+.waiting .progress-caption{color:var(--muted)}
+.lesson-progress progress{display:block;width:100%;height:6px;border:0;border-radius:999px;overflow:hidden;background:var(--track);accent-color:var(--green);appearance:none}
+.lesson-progress progress::-webkit-progress-bar{background:var(--track)}
+.lesson-progress progress::-webkit-progress-value{background:var(--green);border-radius:999px}
+.lesson-progress progress::-moz-progress-bar{background:var(--green);border-radius:999px}
 </style>
   <script defer src="https://telegram.org/js/telegram-web-app.js?vshn=2"></script>
 </head>
@@ -306,6 +322,7 @@ body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
     </section>
 
     <div class="dashboard">
+      <section id="upcoming" class="side-card upcoming" aria-labelledby="upcoming-title"></section>
       <section class="schedule" aria-labelledby="schedule-title">
         <div class="section-top">
           <h2 id="schedule-title"></h2>
@@ -319,13 +336,10 @@ body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
         <div id="lessons" aria-busy="true"></div>
       </section>
 
-      <aside class="sidebar" aria-label="Подробности">
-        <section id="upcoming" class="side-card upcoming"></section>
-        <section class="side-card data-card">
+      <aside class="side-card data-card" aria-label="Данные расписания">
           <div class="side-heading"><span class="side-icon" data-icon="refresh"></span><h2>Данные расписания</h2></div>
           <p id="source-status" role="status">Подключаемся к расписанию ВШН…</p>
           <a id="official" href="https://qr.agni-rt.ru/schedule/" target="_blank" rel="noopener" data-tail="external">Открыть расписание ВШН</a>
-        </section>
       </aside>
     </div>
   </main>
@@ -351,8 +365,8 @@ const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const asDate = iso => new Date(`${iso}T00:00:00Z`);
 const formatDate = (iso, options) => asDate(iso).toLocaleDateString('ru-RU', {...options, timeZone:'UTC'});
-const inMoscow = (locale, options) => new Intl.DateTimeFormat(locale, {timeZone:'Europe/Moscow', ...options}).format(new Date());
-const todayIso = () => inMoscow('sv-SE', {year:'numeric', month:'2-digit', day:'2-digit'});
+const moscowDate = new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow', year:'numeric', month:'2-digit', day:'2-digit'});
+const todayIso = () => moscowDate.format(Date.now());
 const titleCase = text => text.charAt(0).toUpperCase() + text.slice(1);
 const validDate = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso ?? '') && Number.isFinite(+asDate(iso)) && asDate(iso).toISOString().slice(0,10) === iso;
 function addDays(iso, days) {
@@ -505,34 +519,80 @@ const shortType = {
   'лабораторные работы':['Лабораторная','lab'], 'лабораторные занятия':['Лабораторная','lab'],
   'экзамен':['Экзамен','exam'], 'зачёт':['Зачёт','exam'], 'зачет':['Зачёт','exam']
 };
+const lessonTimestamp = (date,time) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time ?? '')
+  ? Date.parse(`${date}T${time}:00+03:00`) : NaN;
+const lessonRunning = (item,now) => item.start <= now && now < item.end;
+function durationText(ms) {
+  const minutes = Math.ceil(ms / 60000);
+  const hours = Math.floor(minutes / 60);
+  return hours ? `${hours} ч ${minutes % 60} мин` : `${minutes} мин`;
+}
+const progress = (liveLabel = '') => `<div class="lesson-progress" hidden>
+  <div class="progress-caption">${liveLabel ? `<strong>${liveLabel}</strong>` : ''}<span></span></div>
+  <progress max="100" value="0" aria-label="Прогресс пары"></progress>
+</div>`;
 function lessonCard(item) {
   const rawType = item.lesson_type?.trim();
   const [type, style] = shortType[rawType?.toLowerCase()] ?? [rawType || 'Занятие',''];
   const room = item.room?.match(/^\S+/)?.[0] ?? '';
   const roomLabel = /\d/.test(room) ? room : item.room;
-  return `<article class="lesson ${style}">
+  const timed = item.end > item.start;
+  return `<article class="lesson ${style}"${timed ? ` data-start="${item.start}" data-end="${item.end}"` : ''}>
     <div class="lesson-time"><b>${escape(item.start_time || '—')}</b>${item.end_time ? `<span>до ${escape(item.end_time)}</span>` : ''}${item.pair_number ? `<span>${escape(item.pair_number)} пара</span>` : ''}</div>
     <div class="lesson-main"><h3>${escape(item.discipline || 'Занятие')}</h3>
     ${item.teacher ? `<p class="teacher">${escape(item.teacher)}</p>` : ''}<span class="tag">${escape(type)}</span>
     ${item.note ? `<p class="note">${escape(item.note)}</p>` : ''}</div>
     ${roomLabel || item.address ? `<div class="room">${roomLabel ? `<b title="${escape(item.room)}">${icon('pin')}${escape(roomLabel)}</b>` : ''}${item.address ? `<small>${escape(item.address)}</small>` : ''}</div>` : ''}
+    ${timed ? progress('Идёт сейчас') : ''}
   </article>`;
 }
-function upcoming(items, today, week) {
-  const now = inMoscow('en-GB', {hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
-  const selected = today >= week && today <= addDays(week,6);
-  const current = selected && items.find(item => item.date === today && item.start_time && item.end_time && item.start_time <= now && item.end_time > now);
-  const next = current || (selected && items.find(item => item.date > today || (item.date === today && item.start_time > now)));
-  const status = !selected ? 'Откройте текущую неделю, чтобы увидеть ближайшие занятия.' : !data ? 'Ожидаем данные расписания группы.' : 'На этой неделе больше нет занятий.';
-  $('upcoming').innerHTML = `<div class="side-heading"><span class="side-icon">${icon('clock')}</span><h2>${current ? 'Пара идёт сейчас' : 'Ближайшая пара'}</h2></div>
-  ${next ? `<p class="next-time">${next.date === today ? 'Сегодня' : shortDate(next.date)} · ${escape(next.start_time)}${next.end_time ? `–${escape(next.end_time)}` : ''}</p>
-  <p class="next-title">${escape(next.discipline || 'Занятие')}</p>${next.room ? `<p>${escape(next.room)}</p>` : ''}` : `<p>${status}</p>`}`;
+let clockItems = [];
+let clockDay;
+let upcomingMarkup = '';
+function setProgress(block,item,now) {
+  const running = lessonRunning(item,now);
+  block.hidden = false;
+  block.classList.toggle('waiting',!running);
+  block.querySelector('progress').value = running ? (now - item.start) * 100 / (item.end - item.start) : 0;
+  const text = running ? `До конца ${durationText(item.end - now)}` : `До начала ${durationText(item.start - now)}`;
+  const caption = block.querySelector('.progress-caption span');
+  if (caption.textContent !== text) caption.textContent = text;
+}
+function updateLessonClock() {
+  const now = Date.now();
+  const today = todayIso();
+  if (clockDay !== today) return render();
+  const selected = startWeek(today) === startWeek(day);
+  const current = selected && clockItems.find(item => lessonRunning(item,now));
+  const next = current || (selected && clockItems.find(item => item.start > now || (!Number.isFinite(item.start) && item.date > today)));
+  const status = !selected ? 'Откройте текущую неделю, чтобы увидеть ближайшие занятия.' : !data ? 'Данные о парах пока недоступны.' : 'На этой неделе больше нет занятий.';
+  const card = $('upcoming');
+  const markup = `<div class="side-heading"><span class="side-icon">${icon('clock')}</span><h2 id="upcoming-title">${current ? 'Пара идёт сейчас' : 'Ближайшая пара'}</h2></div>
+  ${next ? `<p class="next-time">${next.date === today ? 'Сегодня' : shortDate(next.date)}${next.start_time ? ` · ${escape(next.start_time)}${next.end_time ? `–${escape(next.end_time)}` : ''}` : ''}</p>
+  <p class="next-title">${escape(next.discipline || 'Занятие')}</p>${next.room ? `<p>${escape(next.room)}</p>` : ''}${Number.isFinite(next.start) ? progress() : ''}` : `<p>${status}</p>`}`;
+  if (markup !== upcomingMarkup) {
+    card.innerHTML = markup;
+    upcomingMarkup = markup;
+  }
+  card.classList.toggle('is-current',Boolean(current));
+  const upcomingProgress = card.querySelector('.lesson-progress');
+  if (upcomingProgress) setProgress(upcomingProgress,next,now);
+
+  for (const lesson of $('lessons').querySelectorAll('.lesson[data-start]')) {
+    const item = {start:Number(lesson.dataset.start),end:Number(lesson.dataset.end)};
+    const running = lessonRunning(item,now);
+    lesson.classList.toggle('is-current',running);
+    const block = lesson.querySelector('.lesson-progress');
+    if (running) setProgress(block,item,now);
+    else block.hidden = true;
+  }
 }
 function message(heading, detail = '', retry = false) {
   return `<div class="message"><b>${heading}</b>${detail}${retry ? '<br><button type="button" id="retry">Повторить загрузку</button>' : ''}</div>`;
 }
 function render() {
   const today = todayIso();
+  clockDay = today;
   const week = startWeek(day);
   const end = addDays(week,6);
   const time = $('hero-date');
@@ -544,7 +604,10 @@ function render() {
   $('day-view').setAttribute('aria-pressed',String(view === 'day'));
   $('week-view').setAttribute('aria-pressed',String(view === 'week'));
   $('official').href = official + '?' + new URLSearchParams({group, date:day, view});
-  const items = (data?.items ?? []).slice().sort((a,b) => a.date.localeCompare(b.date) || (a.start_time || '').localeCompare(b.start_time || ''));
+  const items = (data?.items ?? []).map(item => ({...item,
+    start:lessonTimestamp(item.date,item.start_time),end:lessonTimestamp(item.date,item.end_time)
+  })).sort((a,b) => a.date.localeCompare(b.date) || (a.start_time || '').localeCompare(b.start_time || ''));
+  clockItems = items;
   const days = Array.from({length:7}, (_,index) => addDays(week,index));
   [...$('days').children].forEach((button,index) => {
     const iso = days[index];
@@ -556,8 +619,6 @@ function render() {
     else button.removeAttribute('aria-current');
     button.lastElementChild.textContent = Number(iso.slice(-2));
   });
-  upcoming(items,today,week);
-
   const source = $('source-status');
   const stamp = data?.updated_at && new Date(data.updated_at);
   const when = stamp && Number.isFinite(+stamp) ? stamp.toLocaleString('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}) : '';
@@ -585,6 +646,7 @@ function render() {
   else list.innerHTML = days.filter(iso => items.some(item => item.date === iso)).map(iso =>
     `<section class="week-day"><h3 class="day-heading">${longDay(iso)}</h3><div class="lesson-stack">${items.filter(item => item.date === iso).map(lessonCard).join('')}</div></section>`
   ).join('');
+  updateLessonClock();
 }
 function updateUrl() {
   if (location.protocol === 'file:') return;
@@ -652,7 +714,12 @@ $('week-view').addEventListener('click', () => chooseDay(day,'week'));
 closePicker();
 loadWeek();
 refreshSchedule();
-document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshSchedule(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  updateLessonClock();
+  refreshSchedule();
+});
+setInterval(() => { if (!document.hidden) updateLessonClock(); },1000);
 setInterval(() => { if (!document.hidden) refreshSchedule(); },5 * 60 * 1000);
 document.addEventListener('DOMContentLoaded', () => {
   const telegram = window.Telegram?.WebApp;

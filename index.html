@@ -352,6 +352,7 @@ body:has(.schedule-menu[open]){overflow:hidden}
 }
 .first-lesson time{flex:none;font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}
 .first-lesson strong,.first-lesson span{display:block;overflow-wrap:anywhere}
+#countdown-details{display:grid;gap:6px}
 .first-lesson span{font-size:.8rem;color:#eee3d6}
 .first-lesson span:empty{display:none}
 .oil-scene{position:absolute;z-index:0;inset:0;overflow:hidden;pointer-events:none}
@@ -447,11 +448,11 @@ body:has(.schedule-menu[open]){overflow:hidden}
               <p>Альметьевский государственный<br> технологический университет</p>
             </div>
             <div id="hero-countdown" hidden>
-              <p class="countdown-label">До первой пары</p>
+              <p class="countdown-label" id="countdown-label"></p>
               <p class="countdown-time" id="countdown-time"></p>
               <div class="first-lesson">
                 <time id="first-time"></time>
-                <div><strong id="first-title"></strong><span id="first-room"></span></div>
+                <div id="countdown-details"></div>
               </div>
             </div>
           </div>
@@ -782,10 +783,9 @@ let clockItems = [];
 let clockDay;
 let upcomingMarkup = '';
 let countdownLesson;
-function updateHeroClock(now,today,selected) {
-  const first = selected && (day === today || view === 'week') &&
-    clockItems.find(item => item.date === today && Number.isFinite(item.start));
-  const counting = Boolean(first && now < first.start);
+function updateHeroClock(now,today,current,next) {
+  const counting = !current && (day === today || view === 'week') &&
+    next?.date === today && next.start > now;
   const hero = $('hero');
   const hour = Number(moscowHour.format(now));
   hero.classList.toggle('counting',counting);
@@ -793,14 +793,20 @@ function updateHeroClock(now,today,selected) {
   $('hero-countdown').hidden = !counting;
   $('hero-default').hidden = counting;
   if (!counting) return;
-  const remaining = durationText(first.start - now);
+  const first = clockItems.find(item => item.date === today && Number.isFinite(item.start));
+  const label = first === next ? 'До первой пары' : 'До следующей пары';
+  if ($('countdown-label').textContent !== label) $('countdown-label').textContent = label;
+  const remaining = durationText(next.start - now);
   if ($('countdown-time').textContent !== remaining) $('countdown-time').textContent = remaining;
-  if (first !== countdownLesson) {
-    $('first-time').dateTime = first.start_time;
-    $('first-time').textContent = first.start_time;
-    $('first-title').textContent = first.discipline || 'Занятие';
-    $('first-room').textContent = first.room || '';
-    countdownLesson = first;
+  if (next !== countdownLesson) {
+    $('first-time').dateTime = next.start_time;
+    $('first-time').textContent = next.start_time;
+    const details = clockItems.filter(item => item.start === next.start).map(item => {
+      const room = [item.room,item.address].filter(Boolean).join(' · ');
+      return `<div><strong>${escape(item.discipline || 'Занятие')}</strong><span>${escape(room)}</span></div>`;
+    });
+    $('countdown-details').innerHTML = [...new Set(details)].join('');
+    countdownLesson = next;
   }
 }
 function setProgress(block,item,now) {
@@ -817,9 +823,9 @@ function updateLessonClock() {
   const today = todayIso();
   if (clockDay !== today) return render();
   const selected = startWeek(today) === startWeek(day);
-  updateHeroClock(now,today,selected);
   const current = selected && clockItems.find(item => lessonRunning(item,now));
   const next = current || (selected && clockItems.find(item => item.start > now || (!Number.isFinite(item.start) && item.date > today)));
+  updateHeroClock(now,today,current,next);
   const status = teacherMode && !teacher ? 'Выберите преподавателя.' : !selected ? 'Откройте текущую неделю, чтобы увидеть ближайшие занятия.' : !data ? 'Данные о парах пока недоступны.' : 'На этой неделе больше нет занятий.';
   const card = $('upcoming');
   const markup = `<div class="side-heading"><span class="side-icon">${icon('clock')}</span><h2 id="upcoming-title">${current ? 'Пара идёт сейчас' : 'Ближайшая пара'}</h2></div>

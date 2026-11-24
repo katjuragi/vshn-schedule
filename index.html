@@ -208,6 +208,56 @@ svg{display:block;width:19px;height:19px;flex:none}
 @media(max-width:540px){.wrap{width:calc(100% - 28px)}.top-inner{min-height:64px}.hero{min-height:238px;margin-top:14px;border-radius:18px}.hero-inner{padding:23px 18px}.hero::before{background-image:linear-gradient(90deg,#12372f 0%,#12372feb 23%,#12372f2a 100%),var(--campus);background-position:center,59% 48%;opacity:.9}.hero h1{font-size:3rem;margin:14px 0 9px}.hero p{font-size:.875rem}.controls{margin:13px 0 19px;display:grid;gap:13px;padding:12px}.group{width:100%}.week-controls{display:grid;grid-template-columns:42px minmax(0,1fr) 42px auto;gap:5px}#week-label{min-width:0;white-space:normal}.today-button{margin-left:2px}.days{gap:4px}.day{min-height:58px;border-radius:8px}.views button{padding-inline:8px}.lesson{grid-template-columns:54px minmax(0,1fr);padding:10px 9px;gap:7px 9px}.room{grid-column:2;gap:3px}.room small:empty{display:none}.sidebar{grid-template-columns:1fr}.footer{margin-top:20px}}
 
 body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
+
+.top-actions{display:flex;align-items:center;gap:8px}
+.theme-toggle{display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--green)}
+.theme-toggle:hover{background:#ebf4df}
+@media(max-width:380px){.source-link span{display:none}.source-link{display:grid;place-items:center;width:42px;height:42px;padding:0}}
+
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --ink:#fffaf4;
+  --muted:#ccc0b6;
+  --paper:#15110e;
+  --surface:#211a15;
+  --line:#49362a;
+  --dark:#6d442e;
+  --green:#f0b887;
+  --lime:#ffd3a4;
+  --warm-panel:#302219;
+  --warm-hover:#422c20;
+  --focus:#efb37c;
+}
+[data-theme=dark] .top{background:#19130f}
+[data-theme=dark] :is(.source-link,.icon-button,.today-button,.day,.lesson,.side-card,.message),
+[data-theme=dark] #group-options,
+[data-theme=dark] .views button[aria-pressed=true]{
+  background:var(--surface);
+}
+[data-theme=dark] :is(.source-link,.data-card a):hover{color:var(--ink)}
+[data-theme=dark] :is(.theme-toggle,.icon-button,.today-button,.day):hover,
+[data-theme=dark] #group-options li:hover,
+[data-theme=dark] #group-options [aria-selected=true]{background:var(--warm-hover);color:var(--ink)}
+[data-theme=dark] :is(button,a,input):focus-visible,
+[data-theme=dark] .group-picker:focus-within{outline-color:var(--focus)}
+[data-theme=dark] .hero{background:radial-gradient(ellipse at 86% 38%,#65402a,#241710 64%);color:#fffaf4}
+[data-theme=dark] .hero::before{
+  background-image:linear-gradient(90deg,#291a12 7%,#291a12 29%,#3b281b50 72%),var(--campus);
+  filter:grayscale(1) sepia(.8) brightness(.72);
+}
+[data-theme=dark] .hero-date{border-color:#c88f605f;color:#ffdbb7}
+[data-theme=dark] .hero p{color:#e7d8ca}
+[data-theme=dark] :is(.views,.upcoming,.side-icon,.message button){background:var(--warm-panel)}
+[data-theme=dark] .upcoming{border-color:#5c3f2e}
+[data-theme=dark] .upcoming .side-icon{background:var(--warm-hover)}
+[data-theme=dark] .day[aria-pressed=true]{background:var(--dark);border-color:#ac7757;color:#f5ddca}
+[data-theme=dark] .day[aria-current=date]:not([aria-pressed=true]){border-color:#bd8a62}
+[data-theme=dark] .day.busy::after{background:var(--green)}
+[data-theme=dark] .lesson{--accent:#9b7964;--tag:#36281f;--tag-text:#f1d7c0}
+[data-theme=dark] .lesson.lecture{--accent:#b895aa;--tag:#3a2b36;--tag-text:#f3d7e9}
+[data-theme=dark] .lesson.practice{--accent:#d19a67;--tag:#432e1f;--tag-text:#ffdab5}
+[data-theme=dark] .lesson.lab{--accent:#df8769;--tag:#492820;--tag-text:#ffd4c3}
+[data-theme=dark] .lesson.exam{--accent:#c5ad70;--tag:#3b321f;--tag-text:#f5e0aa}
 </style>
   <script defer src="https://telegram.org/js/telegram-web-app.js?vshn=2"></script>
 </head>
@@ -218,7 +268,10 @@ body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
         <span class="brand-icon" data-icon="calendar"></span>
         <span><strong>АГТУ ВШН</strong><small>Высшая школа нефти</small></span>
       </a>
-      <a class="source-link" href="https://qr.agni-rt.ru/schedule/" target="_blank" rel="noopener" data-tail="external"><span>Источник ВШН</span></a>
+      <div class="top-actions">
+        <a class="source-link" href="https://qr.agni-rt.ru/schedule/" target="_blank" rel="noopener" aria-label="Источник ВШН" data-tail="external"><span>Источник ВШН</span></a>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Тёмная тема" aria-pressed="false" data-icon="moon"></button>
+      </div>
     </div>
   </header>
   <main class="wrap">
@@ -286,6 +339,8 @@ body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
   right: '<path d="m9 18 6-6-6-6"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   refresh: '<path d="M20 11a8 8 0 1 0-2 6m2-11v5h-5"/>',
+  moon: '<path d="M20.9 13.4A8.9 8.9 0 0 1 10.6 3.1 9 9 0 1 0 20.9 13.4Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
   pin: '<path d="M19 10c0 5-7 10-7 10S5 15 5 10a7 7 0 0 1 14 0Z"/><circle cx="12" cy="10" r="2"/>'
 };
 const icon = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
@@ -325,6 +380,26 @@ let group = validGroup(requestedGroup) ? requestedGroup : validGroup(savedGroup)
 let userChoseGroup = false;
 const telegramStores = [];
 const groupStorageKey = 'schedule-group';
+const themeButton = $('theme-toggle');
+const savedTheme = getSaved('theme');
+const themeStorageKey = 'schedule-theme';
+let themeChanged = false;
+function setTheme(theme) {
+  const dark = theme === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  themeButton.setAttribute('aria-pressed',String(dark));
+  themeButton.title = dark ? 'Включить светлую тему' : 'Включить тёмную тему';
+  themeButton.innerHTML = icon(dark ? 'sun' : 'moon');
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#15110e' : '#13372e';
+}
+setTheme(savedTheme);
+themeButton.addEventListener('click', () => {
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  themeChanged = true;
+  setTheme(theme);
+  save('theme',theme);
+  for (const storage of telegramStores) storage.setItem(themeStorageKey,theme);
+});
 let day = validDate(params.get('date')) ? params.get('date') : todayIso();
 let view = params.get('view') === 'week' ? 'week' : 'day';
 let snapshot = null;
@@ -586,6 +661,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!telegram?.initData && (!telegram?.platform || telegram.platform === 'unknown')) return;
   if (telegram.isVersionAtLeast?.('6.9') && telegram.CloudStorage) telegramStores.push(telegram.CloudStorage);
   if (telegram.isVersionAtLeast?.('9.0') && telegram.DeviceStorage) telegramStores.push(telegram.DeviceStorage);
+  if (themeChanged) {
+    for (const storage of telegramStores) storage.setItem(themeStorageKey,document.documentElement.dataset.theme);
+  } else if (savedTheme !== 'light' && savedTheme !== 'dark') {
+    let themeRestored = false;
+    for (const storage of telegramStores) {
+      storage.getItem(themeStorageKey,(error,theme) => {
+        if (error || themeChanged || themeRestored || (theme !== 'light' && theme !== 'dark')) return;
+        themeRestored = true;
+        setTheme(theme);
+        save('theme',theme);
+      });
+    }
+  }
   if (userChoseGroup) {
     for (const storage of telegramStores) storage.setItem(groupStorageKey,group);
     return;

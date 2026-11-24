@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#13372e">
+  <meta name="notification-api" content="https://vshn-notifications.vshn-agtu-schedule.workers.dev/subscription">
   <meta name="description" content="Расписание учебных групп и преподавателей Высшей школы нефти. Данные из открытого расписания АГТУ ВШН.">
   <title>Расписание занятий · АГТУ ВШН</title>
   <style>/*
@@ -296,6 +297,9 @@ body:has(.schedule-menu[open]){overflow:hidden}
   background:transparent;border:1px solid var(--line);border-radius:11px;
 }
 .schedule-menu nav button:is(:hover,[aria-current]){color:var(--green);background:var(--live-panel);border-color:var(--green)}
+.notification-settings{display:grid;gap:8px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--paper)}
+.notification-settings p{margin:0;font-size:.875rem;line-height:1.45}
+.notification-settings button{border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--green);background:var(--surface);font-weight:750}
 .hero-carousel{margin-top:27px}
 .hero-slides{
   display:grid;grid-auto-flow:column;grid-auto-columns:100%;overflow-x:auto;overscroll-behavior-x:contain;
@@ -425,7 +429,14 @@ body:has(.schedule-menu[open]){overflow:hidden}
     <nav aria-label="Разделы расписания">
       <button type="button" id="groups-mode" aria-current="page" data-icon="users">Расписание групп</button>
       <button type="button" id="teachers-mode" data-icon="teacher">Расписание преподавателей</button>
+      <button type="button" id="notifications-mode" aria-expanded="false" aria-controls="notification-settings" data-icon="bell" hidden>Уведомления</button>
     </nav>
+    <section class="notification-settings" id="notification-settings" aria-label="Уведомления" hidden>
+      <p>Бот напомнит о первой паре за 1,5 часа и сообщит об изменениях расписания.</p>
+      <p id="notification-status" role="status"></p>
+      <button type="button" id="notifications-on" hidden></button>
+      <button type="button" id="notifications-off" hidden>Отключить уведомления</button>
+    </section>
   </dialog>
   <main class="wrap">
     <section class="hero-carousel" aria-label="Расписание и объявления">
@@ -517,6 +528,7 @@ body:has(.schedule-menu[open]){overflow:hidden}
   calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18m-13 5h2m4 0h2"/>',
   users: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2m1-15a3 3 0 0 1 0 6m2 3a4 4 0 0 1 3 4v2"/>',
   teacher: '<path d="M3 5h18v11H3zM8 21l4-5 4 5M8 9h8m-8 3h5"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 12a2 2 0 0 0 4 0"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
   external: '<path d="M13 5h6v6m0-6-9 9"/><path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4"/>',
@@ -722,6 +734,67 @@ function chooseMode(showTeachers) {
 }
 $('groups-mode').addEventListener('click',() => chooseMode(false));
 $('teachers-mode').addEventListener('click',() => chooseMode(true));
+
+const notificationApi = document.querySelector('meta[name="notification-api"]').content;
+const notificationButton = $('notifications-mode');
+const notificationSettings = $('notification-settings');
+const notificationStatus = $('notification-status');
+const notificationsOn = $('notifications-on');
+const notificationsOff = $('notifications-off');
+notificationButton.hidden = !notificationApi;
+let notificationBusy = false;
+async function updateNotification(action,selectedGroup = group) {
+  if (notificationBusy) return;
+  const telegram = window.Telegram?.WebApp;
+  notificationsOn.hidden = true;
+  notificationsOff.hidden = true;
+  if (!telegram?.initData) {
+    notificationStatus.textContent = 'Откройте расписание через @agtuHSPbot, чтобы включить уведомления.';
+    return;
+  }
+  notificationBusy = true;
+  notificationStatus.textContent = 'Проверяем подписку…';
+  try {
+    if (action === 'on' && telegram.requestWriteAccess) {
+      const granted = await new Promise(resolve => telegram.requestWriteAccess(resolve));
+      if (!granted) {
+        notificationStatus.textContent = 'Разрешите боту отправлять сообщения, чтобы включить уведомления.';
+        notificationsOn.hidden = false;
+        return;
+      }
+    }
+    const response = await fetch(notificationApi,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({initData:telegram.initData,action,group:selectedGroup}),
+      signal:AbortSignal.timeout(12000)
+    });
+    if (response.status === 401) {
+      notificationStatus.textContent = 'Переоткройте мини-приложение, чтобы подтвердить вход.';
+      return;
+    }
+    if (!response.ok) throw new Error();
+    const {group:subscribed} = await response.json();
+    notificationStatus.textContent = subscribed ? `Уведомления включены для группы ${subscribed}.` : 'Уведомления выключены.';
+    notificationsOn.textContent = subscribed ? `Переключить на ${group}` : `Включить для группы ${group}`;
+    notificationsOn.hidden = subscribed === group;
+    notificationsOff.hidden = !subscribed;
+  } catch {
+    notificationStatus.textContent = 'Не удалось связаться с сервисом уведомлений. Попробуйте ещё раз.';
+  } finally {
+    notificationBusy = false;
+  }
+}
+notificationButton.addEventListener('click',() => {
+  notificationSettings.hidden = !notificationSettings.hidden;
+  notificationButton.setAttribute('aria-expanded',String(!notificationSettings.hidden));
+  if (!notificationSettings.hidden) updateNotification('status');
+});
+menu.addEventListener('close',() => {
+  notificationSettings.hidden = true;
+  notificationButton.setAttribute('aria-expanded','false');
+});
+notificationsOn.addEventListener('click',() => updateNotification('on'));
+notificationsOff.addEventListener('click',() => updateNotification('off'));
 
 const slides = $('hero-slides');
 const slideButtons = [...document.querySelectorAll('.hero-pagination button')];

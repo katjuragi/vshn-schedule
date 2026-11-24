@@ -209,7 +209,7 @@ svg{display:block;width:19px;height:19px;flex:none}
 
 body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
 </style>
-  <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script defer src="https://telegram.org/js/telegram-web-app.js?vshn=2"></script>
 </head>
 <body>
   <header class="top">
@@ -323,7 +323,8 @@ const savedGroup = getSaved('group');
 let groups = [];
 let group = validGroup(requestedGroup) ? requestedGroup : validGroup(savedGroup) ? savedGroup : sampleGroup;
 let userChoseGroup = false;
-let deviceStorage;
+const telegramStores = [];
+const groupStorageKey = 'schedule-group';
 let day = validDate(params.get('date')) ? params.get('date') : todayIso();
 let view = params.get('view') === 'week' ? 'week' : 'day';
 let snapshot = null;
@@ -368,7 +369,7 @@ function chooseGroup(value) {
   closePicker();
   if (changed) loadWeek();
   else updateUrl();
-  deviceStorage?.setItem('schedule-group',group);
+  for (const storage of telegramStores) storage.setItem(groupStorageKey,value);
 }
 input.addEventListener('focus', () => input.select());
 input.addEventListener('input', () => showPicker(input.value));
@@ -563,17 +564,24 @@ loadWeek();
 refreshSchedule();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshSchedule(); });
 setInterval(() => { if (!document.hidden) refreshSchedule(); },5 * 60 * 1000);
-window.addEventListener('load', () => {
+document.addEventListener('DOMContentLoaded', () => {
   const telegram = window.Telegram?.WebApp;
   telegram?.ready?.();
   telegram?.expand?.();
-  if (!telegram?.initData || !telegram.isVersionAtLeast?.('9.0')) return;
-  deviceStorage = telegram.DeviceStorage;
+  if (!telegram?.initData && (!telegram?.platform || telegram.platform === 'unknown')) return;
+  if (telegram.isVersionAtLeast?.('6.9') && telegram.CloudStorage) telegramStores.push(telegram.CloudStorage);
+  if (telegram.isVersionAtLeast?.('9.0') && telegram.DeviceStorage) telegramStores.push(telegram.DeviceStorage);
   if (userChoseGroup) {
-    deviceStorage?.setItem('schedule-group',group);
-  } else if (!validGroup(requestedGroup) && !validGroup(savedGroup)) {
-    deviceStorage?.getItem('schedule-group', (error,value) => {
-      if (error || userChoseGroup || !validGroup(value) || (groups.length && !groups.includes(value))) return;
+    for (const storage of telegramStores) storage.setItem(groupStorageKey,group);
+    return;
+  }
+  if (validGroup(requestedGroup) || validGroup(savedGroup)) return;
+
+  let restored = false;
+  for (const storage of telegramStores) {
+    storage.getItem(groupStorageKey, (error,value) => {
+      if (error || restored || userChoseGroup || !validGroup(value) || (groups.length && !groups.includes(value))) return;
+      restored = true;
       group = value;
       save('group',group);
       if (options.hidden) input.value = group;

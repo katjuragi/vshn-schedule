@@ -575,7 +575,12 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const storage of telegramStores) storage.setItem(groupStorageKey,group);
     return;
   }
-  if (validGroup(requestedGroup) || validGroup(savedGroup)) return;
+  if (validGroup(savedGroup) && (!groups.length || groups.includes(savedGroup))) {
+    group = savedGroup;
+    if (options.hidden) input.value = group;
+    loadWeek();
+    return;
+  }
 
   let restored = false;
   for (const storage of telegramStores) {

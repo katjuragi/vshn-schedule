@@ -234,12 +234,12 @@ body{padding-bottom:var(--tg-content-safe-area-inset-bottom,0px)}
     <section class="controls" aria-label="Выбор группы и недели">
       <div class="group">
         <label for="group">Учебная группа</label>
-        <div class="group-picker" id="picker">
+        <form class="group-picker" id="picker">
           <span data-icon="users"></span>
-          <input id="group" role="combobox" type="text" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-expanded="false" aria-controls="group-options" placeholder="Найти группу">
+          <input id="group" role="combobox" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" enterkeyhint="go" spellcheck="false" aria-autocomplete="list" aria-expanded="false" aria-controls="group-options" placeholder="Найти группу">
           <button type="button" id="toggle-groups" aria-label="Показать список групп" data-icon="down"></button>
           <ul id="group-options" role="listbox" aria-label="Учебные группы" hidden></ul>
-        </div>
+        </form>
       </div>
       <div class="week">
         <span class="control-label">Учебная неделя</span>
@@ -335,11 +335,16 @@ let loadFailed = false;
 let matches = [];
 let active = -1;
 const input = $('group');
+const picker = $('picker');
 const options = $('group-options');
 const groupButton = $('toggle-groups');
 const official = 'https://qr.agni-rt.ru/schedule/';
 const optionsId = index => `group-option-${index}`;
-const normalize = value => value.toLocaleLowerCase('ru').replace(/[\s\-–—]/g,'');
+const normalize = value => value.toLowerCase().replace(/[\s\p{Dash_Punctuation}−]/gu,'');
+function typedGroup() {
+  const query = normalize(input.value);
+  return groups.find(item => normalize(item) === query);
+}
 
 function closePicker() {
   options.hidden = true;
@@ -350,7 +355,8 @@ function closePicker() {
   active = -1;
 }
 function showPicker(filter = '') {
-  matches = groups.filter(item => normalize(item).includes(normalize(filter)));
+  const query = normalize(filter);
+  matches = query ? groups.filter(item => normalize(item).includes(query)).slice(0,24) : groups;
   options.innerHTML = matches.length
     ? matches.map((item,index) => `<li id="${optionsId(index)}" data-index="${index}" role="option" aria-selected="false">${escape(item)}</li>`).join('')
     : '<li class="no-option" role="presentation">Группа не найдена</li>';
@@ -371,9 +377,9 @@ function chooseGroup(value) {
   else updateUrl();
   for (const storage of telegramStores) storage.setItem(groupStorageKey,value);
 }
-input.addEventListener('focus', () => input.select());
 input.addEventListener('input', () => showPicker(input.value));
 input.addEventListener('keydown', event => {
+  if (event.isComposing) return;
   if (event.key === 'Escape' && !options.hidden) {
     event.preventDefault();
     closePicker();
@@ -390,10 +396,14 @@ input.addEventListener('keydown', event => {
     option.setAttribute('aria-selected','true');
     option.scrollIntoView({block:'nearest'});
   }
-  if (event.key === 'Enter' && !options.hidden) {
-    event.preventDefault();
-    chooseGroup(matches[active] || matches.find(item => normalize(item) === normalize(input.value)) || (matches.length === 1 ? matches[0] : null));
-  }
+});
+picker.addEventListener('submit', event => {
+  event.preventDefault();
+  const value = matches[active] || typedGroup() || (!options.hidden && matches.length === 1 ? matches[0] : null);
+  if (value) {
+    chooseGroup(value);
+    input.blur();
+  } else showPicker(input.value);
 });
 input.addEventListener('click', () => { if (options.hidden) showPicker(); });
 groupButton.addEventListener('click', () => {
@@ -406,8 +416,13 @@ options.addEventListener('click', event => {
   const option = event.target.closest('[data-index]');
   if (option) chooseGroup(matches[Number(option.dataset.index)]);
 });
-$('picker').addEventListener('focusout', event => { if (!$('picker').contains(event.relatedTarget)) closePicker(); });
-document.addEventListener('click', event => { if (!$('picker').contains(event.target) && !options.hidden) closePicker(); });
+picker.addEventListener('focusout', event => {
+  if (picker.contains(event.relatedTarget)) return;
+  const value = input.value !== group && typedGroup();
+  if (value) chooseGroup(value);
+  else closePicker();
+});
+document.addEventListener('click', event => { if (!picker.contains(event.target) && !options.hidden) closePicker(); });
 
 const shortType = {
   'лекции':['Лекция','lecture'], 'лекция':['Лекция','lecture'],

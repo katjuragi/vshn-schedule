@@ -7,6 +7,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
+from notice_feed import write_feed
+
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / 'dist/schedule-data.json'
 SEED = ROOT / 'schedule-data.json'
@@ -109,7 +111,14 @@ def write(data):
 
 
 def main():
-    previous, initial = load_previous(os.environ.get('VSHN_PAGES_URL', ''))
+    pages_url = os.environ.get('VSHN_PAGES_URL', '')
+    previous, initial = load_previous(pages_url)
+    prior_feed = {}
+    if pages_url and not initial:
+        try:
+            prior_feed = download_json(f'{pages_url.rstrip("/")}/notice-feed.json?run={time.time_ns()}')
+        except (DownloadError, ValueError):
+            pass
     groups = previous['groups']
     try:
         directory = download_json(API + 'groups/')
@@ -166,10 +175,13 @@ def main():
             raise SystemExit('Источник ВШН не вернул расписание ни для одной группы. Публикация пропущена.')
         print('::warning::Источник ВШН недоступен. При первой публикации используется стартовая копия.')
         write(previous)
+        write_feed(DATA.with_name('notice-feed.json'), previous, previous, {}, datetime.now(MOSCOW), True)
         return
     if successful < len(groups) * 2:
         print('::warning::По некоторым группам или неделям ВШН не ответила. Сохранены доступные копии.')
-    write({'groups': groups, 'weeks': {week: entries for week, entries in weeks.items() if entries}})
+    published = {'groups': groups, 'weeks': {week: entries for week, entries in weeks.items() if entries}}
+    write(published)
+    write_feed(DATA.with_name('notice-feed.json'), previous, published, prior_feed, datetime.now(MOSCOW), initial)
 
 
 if __name__ == '__main__':

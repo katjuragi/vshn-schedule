@@ -136,7 +136,8 @@ svg{display:block;width:19px;height:19px;flex:none}
 .hero-date svg{width:15px;height:15px}
 .hero h1{font-size:clamp(3rem,5.8vw,5rem);line-height:.98;letter-spacing:-.075em;margin:15px 0 12px;font-weight:800}
 .hero p{color:#dbe7d9;font-size:.925rem;line-height:1.5;margin:0}
-.controls{display:flex;justify-content:space-between;gap:20px;margin:23px 0 27px;padding:16px 19px;background:var(--surface);border:1px solid var(--line);border-radius:17px}
+.controls{position:relative;display:flex;justify-content:space-between;gap:20px;margin:23px 0 27px;padding:16px 19px;background:var(--surface);border:1px solid var(--line);border-radius:17px}
+.schedule-cat{position:absolute;bottom:calc(100% + 1px);right:13px;width:106px;height:auto;pointer-events:none}
 .group{width:min(300px,100%);min-width:160px}
 .controls label,.control-label{display:block;color:var(--muted);font-size:.83rem;font-weight:750;margin-bottom:6px}
 .group-picker,.week-controls{display:flex;align-items:center;gap:6px}
@@ -323,7 +324,7 @@ body:has(.schedule-menu[open]){overflow:hidden}
 .hero-pagination button{display:grid;place-items:center;width:44px;height:28px;border:0;border-radius:7px;background:transparent}
 .hero-pagination button::before{content:"";width:9px;height:9px;background:var(--line);border:1px solid var(--muted);border-radius:20px}
 .hero-pagination button[aria-pressed=true]::before{width:25px;background:var(--green);border-color:var(--green)}
-.hero-carousel + .controls{margin-top:7px}
+.hero-carousel + .controls{margin-top:42px}
 #group-options li[role=option]{overflow-wrap:anywhere}
 
 /* CSS geometry keeps the pump's moving parts crisp at phone sizes. */
@@ -393,6 +394,8 @@ body:has(.schedule-menu[open]){overflow:hidden}
   .source-link{display:grid;place-items:center;width:42px;height:42px;padding:0}
   .source-link span{display:none}
   .hero-carousel{margin-top:14px}
+  .hero-carousel + .controls{margin-top:30px}
+  .schedule-cat{width:90px}
   .hero-slides{border-radius:18px}
   .hero.counting .hero-inner{padding:20px 16px}
   .hero .countdown-time{font-size:clamp(2.25rem,9vw,3rem)}
@@ -402,6 +405,7 @@ body:has(.schedule-menu[open]){overflow:hidden}
   .banner-label{top:12px;left:12px}
 }
 @media(max-width:345px){.brand small{display:none}.brand-icon{width:32px;height:32px}}
+@media(max-width:340px){.hero-pagination{padding-right:38px}}
 @media(prefers-reduced-motion:reduce){
   .schedule-menu[open],.sky-orb,.pump-beam,.pump-rod{animation:none}
 }
@@ -482,6 +486,7 @@ body:has(.schedule-menu[open]){overflow:hidden}
 
 
     <section class="controls" aria-label="Выбор расписания и недели">
+      <img class="schedule-cat" id="schedule-cat" alt="" width="90" hidden>
       <div class="group">
         <label for="group" id="picker-label">Учебная группа</label>
         <form class="group-picker" id="picker">
@@ -862,8 +867,15 @@ function updateHeroClock(now,today,current,next) {
     next?.date === today && next.start > now;
   const hero = $('hero');
   const hour = Number(moscowHour.format(now));
+  const night = hour < 7 || hour >= 19;
   hero.classList.toggle('counting',counting);
-  hero.classList.toggle('night',counting && (hour < 7 || hour >= 19));
+  hero.classList.toggle('night',counting && night);
+  const cat = $('schedule-cat');
+  const pose = night ? './cat-sleeping.png' : './cat-studying.png';
+  if (cat.getAttribute('src') !== pose) {
+    cat.src = pose;
+    cat.hidden = false;
+  }
   $('hero-countdown').hidden = !counting;
   $('hero-default').hidden = counting;
   if (!counting) return;

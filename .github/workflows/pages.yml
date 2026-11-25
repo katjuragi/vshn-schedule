@@ -34,7 +34,7 @@ jobs:
       - name: Подготовить сайт
         run: |
           mkdir -p dist
-          cp index.html dist/index.html
+          cp index.html cat-sleeping.png cat-studying.png dist/
       - name: Загрузить расписание ВШН
         env:
           VSHN_PAGES_URL: ${{ steps.pages.outputs.base_url }}

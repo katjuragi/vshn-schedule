@@ -329,23 +329,24 @@ body:has(.schedule-menu[open]){overflow:hidden}
 
 /* CSS geometry keeps the pump's moving parts crisp at phone sizes. */
 .oil-scene{display:none}
-.hero.counting{
+.hero.idle{
   --sky-left:#164539;--sky-middle:#285b49;--sky-right:#71946e;--oil:#18362b;--hill:#4a7052;
   --orb:#fff0bd;--halo:#ffdf8a80;
   background:linear-gradient(108deg,var(--sky-left) 22%,var(--sky-middle) 58%,var(--sky-right));
 }
-[data-theme=dark] .hero.counting{
+[data-theme=dark] .hero.idle{
   --sky-left:#2b1b14;--sky-middle:#583625;--sky-right:#ae7850;--oil:#2a1b16;--hill:#70513c;
 }
-.hero.counting.night{
+.hero.idle.night{
   --sky-left:#142e2e;--sky-middle:#244142;--sky-right:#456362;--oil:#172e2f;--hill:#374d48;
   --orb:#fff6db;--halo:#d3e1c761;
 }
-[data-theme=dark] .hero.counting.night{
+[data-theme=dark] .hero.idle.night{
   --sky-left:#211816;--sky-middle:#392924;--sky-right:#5a4c45;--oil:#211818;--hill:#4b3a32;
 }
-.hero.counting::before{display:none}
-.hero.counting .hero-inner{position:relative;z-index:1;padding-block:24px}
+.hero.idle::before{display:none}
+.hero.idle .hero-inner{position:relative;z-index:1}
+.hero.counting .hero-inner{padding-block:24px}
 .hero.counting h1{position:absolute;width:1px;height:1px;margin:0;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
 .hero .countdown-label{margin-top:14px;color:#fff4e4;font-weight:750;font-size:.95rem}
 .hero .countdown-time{
@@ -356,13 +357,13 @@ body:has(.schedule-menu[open]){overflow:hidden}
   display:flex;align-items:center;gap:10px;width:fit-content;max-width:min(100%,450px);padding:8px 11px;
   color:#fff8ee;background:#16191470;border:1px solid #fff4e449;border-radius:11px;
 }
-.first-lesson time{flex:none;font-size:1rem;font-weight:800;font-variant-numeric:tabular-nums}
+.first-lesson time{flex:none;max-width:8em;font-size:.875rem;font-weight:800;font-variant-numeric:tabular-nums}
 .first-lesson strong,.first-lesson span{display:block;overflow-wrap:anywhere}
 #countdown-details{display:grid;gap:6px}
 .first-lesson span{font-size:.8rem;color:#eee3d6}
 .first-lesson span:empty{display:none}
 .oil-scene{position:absolute;z-index:0;inset:0;overflow:hidden;pointer-events:none}
-.hero.counting .oil-scene{display:block}
+.hero.idle .oil-scene{display:block}
 .sky-orb{
   position:absolute;top:15%;right:13%;width:clamp(46px,7vw,86px);aspect-ratio:1;border-radius:50%;
   background:var(--orb);box-shadow:0 0 32px 10px var(--halo);animation:sky-glow 6s ease-in-out infinite alternate;
@@ -432,6 +433,9 @@ body:has(.schedule-menu[open]){overflow:hidden}
 .about-source a{margin-top:8px}
 .about-source a:hover{text-decoration:underline}
 .about-back{justify-self:start;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px}
+.about-support dl{margin:0;display:grid;gap:10px}
+.about-support dt{font-weight:800;font-size:.875rem}
+.about-support dd{margin:3px 0 0;color:var(--muted);overflow-wrap:anywhere;user-select:all}
 @media(max-width:540px){.about-page{margin-top:14px;gap:17px}.about-intro{padding:12px}.about-feature{padding:11px}}
 </style>
   <script defer src="https://telegram.org/js/telegram-web-app.js?vshn=2"></script>
@@ -597,6 +601,14 @@ body:has(.schedule-menu[open]){overflow:hidden}
       <h2 id="about-source-title">Источник расписания</h2>
       <p>«Расписание ВШН» — неофициальный студенческий проект. Данные занятий берём из открытого расписания АГТУ ВШН.</p>
       <a href="https://qr.agni-rt.ru/schedule/" target="_blank" rel="noopener" data-tail="external">Официальное расписание в Тандеме</a>
+    </section>
+    <section class="about-source about-support" aria-labelledby="about-support-title">
+      <h2 id="about-support-title">Поддержка проекта</h2>
+      <dl>
+        <div><dt>TRON · TRC20</dt><dd><code>TJVGtEhmTb2VU5DFpi8xDJ7uB369RMXPV7</code></dd></div>
+        <div><dt>TON</dt><dd><code>UQCh8RF_03JS9yAPC22VosGe3FkleOgoxW2OJB3kBUBfFOfZ</code></dd></div>
+        <div><dt>Solana</dt><dd><code>3fxJSwcnb8JdW8yKHEcKh29tr6KihgnKAhxQsrk3iR2L</code></dd></div>
+      </dl>
     </section>
     <button type="button" class="about-back" id="about-back">К расписанию</button>
   </main>
@@ -967,13 +979,13 @@ let clockDay;
 let upcomingMarkup = '';
 let countdownLesson;
 function updateHeroClock(now,today,current,next) {
-  const counting = !current && (day === today || view === 'week') &&
-    next?.date === today && next.start > now;
+  const counting = !current && next?.start > now;
   const hero = $('hero');
   const hour = Number(moscowHour.format(now));
   const night = hour < 7 || hour >= 19;
   hero.classList.toggle('counting',counting);
-  hero.classList.toggle('night',counting && night);
+  hero.classList.toggle('idle',!current);
+  hero.classList.toggle('night',night);
   const cat = $('schedule-cat');
   const pose = night ? './cat-sleeping.png' : './cat-studying.png';
   if (cat.getAttribute('src') !== pose) {
@@ -984,13 +996,13 @@ function updateHeroClock(now,today,current,next) {
   $('hero-default').hidden = counting;
   if (!counting) return;
   const first = clockItems.find(item => item.date === today && Number.isFinite(item.start));
-  const label = first === next ? 'До первой пары' : 'До следующей пары';
+  const label = next.date !== today ? 'До ближайшей пары' : first === next ? 'До первой пары' : 'До следующей пары';
   if ($('countdown-label').textContent !== label) $('countdown-label').textContent = label;
   const remaining = durationText(next.start - now);
   if ($('countdown-time').textContent !== remaining) $('countdown-time').textContent = remaining;
   if (next !== countdownLesson) {
-    $('first-time').dateTime = next.start_time;
-    $('first-time').textContent = next.start_time;
+    $('first-time').dateTime = `${next.date}T${next.start_time}:00+03:00`;
+    $('first-time').textContent = next.date === today ? next.start_time : `${shortDate(next.date)} · ${next.start_time}`;
     const details = clockItems.filter(item => item.start === next.start).map(item => {
       const room = [item.room,item.address].filter(Boolean).join(' · ');
       return `<div><strong>${escape(item.discipline || 'Занятие')}</strong><span>${escape(room)}</span></div>`;
@@ -1013,9 +1025,11 @@ function updateLessonClock() {
   const today = todayIso();
   if (clockDay !== today) return render();
   const selected = startWeek(today) === startWeek(day);
-  const current = selected && clockItems.find(item => lessonRunning(item,now));
-  const next = current || (selected && clockItems.find(item => item.start > now || (!Number.isFinite(item.start) && item.date > today)));
-  updateHeroClock(now,today,current,next);
+  const running = clockItems.find(item => lessonRunning(item,now));
+  const upcoming = clockItems.find(item => item.start > now);
+  updateHeroClock(now,today,running,upcoming);
+  const current = selected && running;
+  const next = selected && (current || upcoming || clockItems.find(item => !Number.isFinite(item.start) && item.date > today));
   const status = teacherMode && !teacher ? 'Выберите преподавателя.' : !selected ? 'Откройте текущую неделю, чтобы увидеть ближайшие занятия.' : !data ? 'Данные о парах пока недоступны.' : 'На этой неделе больше нет занятий.';
   const card = $('upcoming');
   const markup = `<div class="side-heading"><span class="side-icon">${icon('clock')}</span><h2 id="upcoming-title">${current ? 'Пара идёт сейчас' : 'Ближайшая пара'}</h2></div>
@@ -1041,6 +1055,11 @@ function updateLessonClock() {
 function message(heading, detail = '', retry = false) {
   return `<div class="message"><b>${heading}</b>${detail}${retry ? '<br><button type="button" id="retry">Повторить загрузку</button>' : ''}</div>`;
 }
+function timedItems(entry) {
+  return (entry?.items ?? []).map(item => ({...item,
+    start:lessonTimestamp(item.date,item.start_time),end:lessonTimestamp(item.date,item.end_time)
+  })).sort((a,b) => a.date.localeCompare(b.date) || (a.start_time || '').localeCompare(b.start_time || ''));
+}
 function render() {
   const today = todayIso();
   clockDay = today;
@@ -1055,10 +1074,13 @@ function render() {
   $('day-view').setAttribute('aria-pressed',String(view === 'day'));
   $('week-view').setAttribute('aria-pressed',String(view === 'week'));
   $('official').href = official + '?' + new URLSearchParams({...teacherMode ? {teacher} : {group}, date:day, view});
-  const items = (data?.items ?? []).map(item => ({...item,
-    start:lessonTimestamp(item.date,item.start_time),end:lessonTimestamp(item.date,item.end_time)
-  })).sort((a,b) => a.date.localeCompare(b.date) || (a.start_time || '').localeCompare(b.start_time || ''));
-  clockItems = items;
+  const items = timedItems(data);
+  const currentWeek = startWeek(today);
+  const nextWeek = addDays(currentWeek,7);
+  clockItems = [
+    ...(week === currentWeek ? items : timedItems(scheduleForWeek(currentWeek))),
+    ...(week === nextWeek ? items : timedItems(scheduleForWeek(nextWeek)))
+  ];
   const days = Array.from({length:7}, (_,index) => addDays(week,index));
   [...$('days').children].forEach((button,index) => {
     const iso = days[index];
@@ -1138,9 +1160,12 @@ function teacherWeek(entries,name) {
   }
   return {items:[...lessons.values()],stale,updated_at:updatedAt};
 }
+function scheduleForWeek(week) {
+  const entries = snapshot?.weeks?.[week];
+  return teacherMode ? teacherWeek(entries,teacher) : entries && Object.hasOwn(entries,group) ? entries[group] : null;
+}
 function loadWeek() {
-  const entries = snapshot?.weeks?.[startWeek(day)];
-  data = teacherMode ? teacherWeek(entries,teacher) : entries && Object.hasOwn(entries,group) ? entries[group] : null;
+  data = scheduleForWeek(startWeek(day));
   if (data) {
     const olderThanTwoHours = Date.now() - Date.parse(data.updated_at) > 2 * 60 * 60 * 1000;
     sourceState = data.stale || olderThanTwoHours || loadFailed ? 'cached' : 'fresh';
